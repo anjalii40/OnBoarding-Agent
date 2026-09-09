@@ -113,7 +113,7 @@ export default function Home() {
       
       <section className="relative w-1/2 h-full hidden lg:block">
         <div className="absolute inset-0 z-20 flex flex-col justify-end p-12 pointer-events-none">
-          <h1 className="text-5xl font-bold tracking-tighter mb-2 font-heading">Codebase Agent</h1>
+          <h1 className="text-5xl font-bold tracking-tighter mb-2 font-heading">Onboarding Agent</h1>
           <p className="text-gray-400 max-w-md text-lg">
             Paste a repository URL and watch the AI instantly vectorize your architecture.
           </p>

@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from app.api import ingest, overview, chat
 from app.limiter import limiter
 
-app = FastAPI(title="AI Codebase Onboarding Agent")
+app = FastAPI(title="Onboarding Agent")
 
 # SDE1+ Feature: Attach global rate limiter
 app.state.limiter = limiter

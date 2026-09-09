@@ -1,4 +1,4 @@
-# AI Codebase Onboarding Agent
+# Onboarding Agent
 
 ![Architecture](https://img.shields.io/badge/Architecture-System_Design-blue) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688) ![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black) ![ChromaDB](https://img.shields.io/badge/Vector_DB-Chroma-FF4B4B)
 
