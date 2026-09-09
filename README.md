@@ -1,114 +1,112 @@
-# 🧠 AI Codebase Onboarding Agent
+# AI Codebase Onboarding Agent
 
-![SDE1+ Architecture](https://img.shields.io/badge/Architecture-SDE1%2B-blue) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688) ![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black) ![ChromaDB](https://img.shields.io/badge/Vector_DB-Chroma-FF4B4B)
+![Architecture](https://img.shields.io/badge/Architecture-System_Design-blue) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688) ![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black) ![ChromaDB](https://img.shields.io/badge/Vector_DB-Chroma-FF4B4B)
 
-Welcome to the **AI Codebase Onboarding Agent**! This project is designed to help software engineers instantly understand massive, undocumented codebases. 
-
-You simply paste a GitHub URL into the UI, and the system downloads the code, reads it, mathematically vectorizes it, and allows you to chat with an AI about the architecture in real-time.
+An enterprise-grade Retrieval-Augmented Generation (RAG) system designed to accelerate software engineer onboarding. The agent autonomously ingests undocumented repositories, mathematically vectorizes the source code, and provides a low-latency, conversational interface for architectural queries.
 
 ---
 
-## 📖 How to Understand This Project (The Simple Explanation)
-Imagine you are handed a 10,000-line codebase and told to "fix a bug." Usually, you would spend days reading files just to understand how things connect.
+## Overview
 
-This agent acts as a Senior Engineer who has already read the code. 
-1. **Ingestion:** It downloads the repository and chops the code into smaller, readable pieces.
-2. **Vectorization:** It converts those pieces into mathematical coordinates (vectors) and stores them in a database.
-3. **Retrieval (RAG):** When you ask, *"How does the auth work?"*, it mathematically searches the database for the 5 most relevant pieces of code, hands them to an LLM (like LLaMA 3 or GPT-4), and gives you a highly accurate, code-backed answer.
+Developer onboarding in large-scale, undocumented systems is traditionally a high-friction process requiring days of manual code traversal. This system mitigates that friction by acting as an autonomous technical lead. 
 
-This pattern is called **Retrieval-Augmented Generation (RAG)**.
+1. **Ingestion & Parsing:** The system clones target repositories and parses the code structurally rather than relying on naive string chunking.
+2. **Vectorization:** The discrete code blocks are embedded into a high-dimensional vector space.
+3. **Retrieval & Inference:** When queried, the system performs a mathematical similarity search to retrieve the exact context required, passing it to a Large Language Model (LLaMA 3 / GPT-4) to generate highly accurate, code-backed architectural explanations.
 
 ---
 
-## 🏗️ System Architecture (The Technical Explanation)
+## System Architecture
 
-This system is a fully decoupled Monorepo (Frontend + Backend) built with production-grade engineering principles.
+The application is a fully decoupled monorepo built on modern distributed system principles.
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Next.js)
-    participant B as FastAPI Backend
-    participant C as ChromaDB
-    participant L as OpenRouter LLM
+    participant Client as Next.js Client
+    participant API as FastAPI Gateway
+    participant DB as ChromaDB (Vector Store)
+    participant LLM as OpenRouter (LLM)
 
-    U->>B: 1. POST /api/ingest (GitHub URL)
-    B->>B: 2. Git Clone to Temp Folder
-    B->>B: 3. Parse Python AST & Chunk Code
-    B->>C: 4. Store Embeddings
-    B-->>U: Success
+    Client->>API: POST /api/ingest { repo_url }
+    API->>API: 1. Clone to Ephemeral Volume
+    API->>API: 2. Parse Abstract Syntax Trees (AST)
+    API->>DB: 3. Store High-Dimensional Embeddings
+    API-->>Client: 200 OK
 
-    U->>B: 5. POST /api/chat (Question)
-    Note over B: Rate Limiter checks IP (Max 5/min)
-    B->>C: 6. Check Semantic Cache
+    Client->>API: POST /api/chat { question }
+    Note over API: IP-Based Token-Bucket Rate Limiter
+    API->>DB: 4. Query Semantic Cache
     
-    alt Cache Hit (Distance < 0.4)
-        C-->>B: Return Cached Answer
-        B-->>U: ⚡ Instant Response
+    alt Cache Hit (L2 Distance < 0.4)
+        DB-->>API: Retrieve Cached Inference
+        API-->>Client: 200 OK (Served in <50ms)
     else Cache Miss
-        B->>C: 7. Vector Search (Top 5 Chunks)
-        C-->>B: Return Raw Code
-        B->>L: 8. Prompt + Context Code
-        L-->>B: Markdown Answer
-        B->>C: 9. Save to Semantic Cache
-        B-->>U: Final Answer
+        API->>DB: 5. Execute Vector Search (Top-k = 5)
+        DB-->>API: Retrieve Source Context
+        API->>LLM: 6. Execute Strict Context Prompt
+        LLM-->>API: Markdown Response
+        API->>DB: 7. Insert to Semantic Cache
+        API-->>Client: 200 OK
     end
 ```
 
-### 🖥️ The Frontend (Next.js App Router)
-The user interface is built for a premium, developer-first experience.
-* **Framework:** Next.js 16 with React 19.
-* **Styling:** Tailwind CSS v4 with a custom pitch-black typography theme.
-* **3D Rendering:** Uses **React Three Fiber** and WebGL to render an interactive 3D particle swarm. The physics engine smoothly accelerates the particles when the backend API is actively fetching data, providing visual loading feedback without traditional spinners.
-* **Markdown:** Responses are parsed via `react-markdown` and `remark-gfm` to perfectly render AI-generated tables, lists, and syntax-highlighted code blocks.
+---
 
-### ⚙️ The Backend (Python FastAPI)
-The backend is a high-performance REST API handling the heavy lifting of the RAG pipeline.
-* **Framework:** FastAPI (Asynchronous Python).
-* **Intelligent AST Chunking:** Instead of naively splitting code every 1,000 characters (which might cut a function in half), the backend uses Python's `ast` (Abstract Syntax Tree) module to parse the code structurally. Entire functions and classes are kept perfectly intact as single chunks.
-* **Database:** ChromaDB (Persistent Vector Store).
+## Key Engineering Decisions
+
+To ensure production readiness, scalability, and cost-efficiency, the following architectural patterns were implemented:
+
+### 1. Abstract Syntax Tree (AST) Parsing
+Standard RAG pipelines utilize overlapping character splitters (e.g., splitting every 1,000 tokens), which frequently bisect function or class definitions, destroying semantic meaning. This ingestion engine utilizes Python's native `ast` module to structurally parse code, ensuring that discrete logical blocks (functions, classes) are embedded perfectly intact. 
+
+### 2. Semantic Caching Layer
+LLM inferences incur significant latency (3–10 seconds) and financial cost. To optimize this, the system implements a secondary `semantic_cache` vector collection. Incoming queries are embedded and compared against historical requests. If the L2 (Euclidean) distance is `< 0.4` (indicating a highly similar semantic intent), the system bypasses the LLM entirely and serves the cached response instantly.
+
+### 3. Rate Limiting & API Security
+Public-facing LLM endpoints are highly susceptible to DDoS and token-draining abuse. The FastAPI gateway is protected by an IP-based Token-Bucket rate limiting algorithm via `slowapi`, restricting clients to a strict quota of queries per minute.
+
+### 4. Non-Blocking Client Rendering
+The frontend utilizes a React Three Fiber WebGL canvas. By passing network loading states (`isThinking`) directly to the 3D physics engine (`THREE.MathUtils.lerp`), the application provides smooth, premium visual feedback independently of React's Virtual DOM rendering cycle, ensuring zero main-thread blocking during heavy data fetches.
 
 ---
 
-## 🚀 SDE1+ Engineering Highlights
-This project includes several mid-level engineering patterns designed for production readiness:
-
-1. **Semantic Caching:** LLM calls are expensive and slow. This system utilizes a dedicated `semantic_cache` ChromaDB collection. When a user asks a question, the API embeds the question and calculates the mathematical distance against past questions. If a highly similar intent is detected (Distance `< 0.4`), it bypasses the LLM entirely and serves the cached answer instantly.
-2. **Rate Limiting:** Endpoints are protected by `slowapi` (Token-Bucket algorithm). The chat endpoint strictly limits requests (e.g., 5 per minute per IP) to prevent malicious actors from draining API credits.
-3. **Graceful Error Boundaries:** The frontend utilizes `try/catch` and UI fallback states to gracefully render API timeouts or backend crashes without breaking the React tree.
-
----
-
-## 💻 How to Run Locally
+## Local Development & Setup
 
 ### Prerequisites
 * Node.js (v20+)
 * Python (3.10+)
-* An [OpenRouter API Key](https://openrouter.ai/) (Free)
+* An [OpenRouter API Key](https://openrouter.ai/)
 
-### 1. Start the Backend
+### Backend Setup (FastAPI)
 ```bash
+# Navigate to the backend directory
 cd backend
+
+# Initialize and activate the virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-```
-Create a `.env` file in the `backend` folder:
-```env
-OPENROUTER_API_KEY=your_api_key_here
-OPENROUTER_MODEL=openrouter/auto
-FRONTEND_URL=http://localhost:3000
-```
-Run the server:
-```bash
+
+# Configure environment variables
+echo "OPENROUTER_API_KEY=your_api_key_here" > .env
+echo "FRONTEND_URL=http://localhost:3000" >> .env
+
+# Start the ASGI server
 uvicorn app.main:app --reload
 ```
 
-### 2. Start the Frontend
-Open a new terminal.
+### Frontend Setup (Next.js)
 ```bash
+# Open a new terminal session
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start the development server
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser. Paste a public GitHub URL and start chatting!
+Navigate to `http://localhost:3000` to access the interface.
