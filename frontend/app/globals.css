@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Geist Sans", "SF Pro Display", -apple-system, sans-serif;
+  --font-heading: "Inter", "Geist Sans", -apple-system, sans-serif;
+  --font-mono: "SFMono-Regular", "SF Mono", "Consolas", monospace;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+}
