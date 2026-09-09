@@ -43,9 +43,7 @@ function ParticleSwarm({ isHovered, isThinking }: { isHovered: boolean, isThinki
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={particlesPosition.length / 3}
-          array={particlesPosition}
-          itemSize={3}
+          args={[particlesPosition, 3]}
         />
       </bufferGeometry>
       <pointsMaterial
