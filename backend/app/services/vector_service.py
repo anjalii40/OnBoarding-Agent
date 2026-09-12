@@ -57,6 +57,50 @@ def chunk_python_ast(source_code: str) -> list[str]:
         
     return chunks if chunks else chunk_overlap(source_code)
 
+import re
+
+def chunk_javascript(source_code: str) -> list[str]:
+    """
+    Heuristic chunker for JS/TS/React (.js, .jsx, .ts, .tsx).
+    Splits the file by major structural keywords (function, class, const, export) 
+    to preserve component and function boundaries, preventing mid-tag truncation.
+    """
+    # Split whenever we see 'export', 'function', 'class', or 'const' at the start of a line/block
+    raw_chunks = re.split(r'(?=\n(?:export )?(?:default )?(?:function|class|const|let|var)\s+)', source_code)
+    
+    final_chunks = []
+    for chunk in raw_chunks:
+        chunk = chunk.strip()
+        if not chunk: 
+            continue
+        # If a single function/component is still massively long, safely sub-chunk it
+        if len(chunk) > 2000:
+            final_chunks.extend(chunk_overlap(chunk, max_chars=1500, overlap=300))
+        else:
+            final_chunks.append(chunk)
+            
+    return final_chunks if final_chunks else chunk_overlap(source_code)
+
+def chunk_markdown_or_html(source_code: str) -> list[str]:
+    """
+    Structural chunker for Markdown (.md) and HTML (.html).
+    Splits by major headings or structural blocks to keep lists and sections together.
+    """
+    # Split by Markdown headers (# or ##) or HTML section/div tags
+    raw_chunks = re.split(r'(?=\n#{1,3} |\n<section|\n<div|\n<main|\n<article)', source_code)
+    
+    final_chunks = []
+    for chunk in raw_chunks:
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        if len(chunk) > 2000:
+            final_chunks.extend(chunk_overlap(chunk, max_chars=1500, overlap=300))
+        else:
+            final_chunks.append(chunk)
+            
+    return final_chunks if final_chunks else chunk_overlap(source_code)
+
 def process_and_store_repo(temp_dir: str) -> int:
     """Reads all files, intelligently chunks them, and stores in ChromaDB."""
     try:
@@ -83,9 +127,16 @@ def process_and_store_repo(temp_dir: str) -> int:
                 continue 
             
             # --- INTELLIGENT CHUNKING ROUTING ---
-            if file.endswith(".py"):
+            ext = os.path.splitext(file)[1].lower()
+            
+            if ext == ".py":
                 chunks = chunk_python_ast(content)
+            elif ext in [".js", ".jsx", ".ts", ".tsx"]:
+                chunks = chunk_javascript(content)
+            elif ext in [".md", ".html", ".htm"]:
+                chunks = chunk_markdown_or_html(content)
             else:
+                # Fallback for CSS, JSON, TXT, etc.
                 chunks = chunk_overlap(content)
             
             for i, chunk in enumerate(chunks):
