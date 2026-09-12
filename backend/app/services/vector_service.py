@@ -5,7 +5,7 @@ import chromadb
 # Initialize Persistent ChromaDB client so data survives server restarts in production
 chroma_client = chromadb.PersistentClient(path="./chroma_data")
 
-def chunk_overlap(text: str, max_chars: int = 1500, overlap: int = 200) -> list[str]:
+def chunk_overlap(text: str, max_chars: int = 4000, overlap: int = 500) -> list[str]:
     """
     Fallback chunker with a sliding window (overlap) for non-Python files.
     """
@@ -74,8 +74,8 @@ def chunk_javascript(source_code: str) -> list[str]:
         if not chunk: 
             continue
         # If a single function/component is still massively long, safely sub-chunk it
-        if len(chunk) > 2000:
-            final_chunks.extend(chunk_overlap(chunk, max_chars=1500, overlap=300))
+        if len(chunk) > 4500:
+            final_chunks.extend(chunk_overlap(chunk, max_chars=4000, overlap=500))
         else:
             final_chunks.append(chunk)
             
@@ -94,8 +94,8 @@ def chunk_markdown_or_html(source_code: str) -> list[str]:
         chunk = chunk.strip()
         if not chunk:
             continue
-        if len(chunk) > 2000:
-            final_chunks.extend(chunk_overlap(chunk, max_chars=1500, overlap=300))
+        if len(chunk) > 4500:
+            final_chunks.extend(chunk_overlap(chunk, max_chars=4000, overlap=500))
         else:
             final_chunks.append(chunk)
             
